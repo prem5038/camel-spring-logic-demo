@@ -6,20 +6,39 @@
        xsi:schemaLocation="
        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://camel.apache.org/schema/spring http://camel.apache.org/schema/spring/camel-spring.xsd">
+    <bean id="echoBean" class="com.prem.bean.EchoBean"/>
 
   <camelContext xmlns="http://camel.apache.org/schema/spring">
     <!-- here is a sample which processes the input files
          (leaving them in place - see the 'noop' flag)
          then performs content based routing on the message using XPath -->
-    <properties>
-      <property key="DATA_IN" value="~/dev/others/data/in"/>
-      <property key="DATA_OUT" value="~/dev/others/data/out"/>
-    </properties>
-    <route>
-      <from uri="file:${DATA_IN}?noop=true"/>
+    <propertyPlaceholder id="properties" location="properties/application.properties"/>
+
+    <route id="startupRoute">
+      <from uri="file:{{DATA_IN}}?noop=true"/>
       <log message="Processing file: ${file:name}"/>
-      <to uri="file:${DATA_OUT}"/>
+        
+        <split parallelProcessing="true" streaming="true">
+            <tokenize token="\n" />
+            <to uri="direct:test1"/>
+        </split>
+        <bean ref="echoBean" method="echoThreadInfoMap"/>
+        <to uri="file:{{DATA_OUT}}"/>
+        <log message="${file:name} has been completed!"/>
     </route>
+
+      <route id="test1">
+          <!--<from uri="seda:test1?concurrentConsumers=100"/>-->
+          <from uri="direct:test1"/>
+          <bean ref="echoBean" method="addThreadInfo"/>
+          <!-- <bean ref="echoBean" method="echoBody"/> -->
+          <!-- <bean ref="echoBean" method="echoThreadInfo"/> -->
+
+      </route>
+
+
+
+
   </camelContext>
 
 </beans>
